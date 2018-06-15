@@ -1,8 +1,36 @@
+const startupDebugger = require('debug')('app:startup');
+const dbDebugger = require('debug')('app:db');
+const config = require('config');
+const morgan = require('morgan');
+const helmet = require('helmet');
 const Joi = require('joi');
+const logger = require('./logger');
 const express = require('express');
 const app = express(); 
 
-app.use(express.json());
+app.set('view engine', 'pug');
+app.set('views', './views');  // default
+
+app.use(express.json());  // req.body 
+app.use(express.urlencoded({ extended: true})); // key=value&key=value 
+app.use(express.static('public'));  //assets like css, html ,images in this folder
+app.use(helmet());
+
+// Configuration
+console.log('Application Name: ' + config.get('name'));
+console.log('Mail Server: ' + config.get('mail.host'));
+console.log('Mail Password: ' + config.get('mail.password'));
+ 
+if(app.get('env') === 'development') {
+    app.use(morgan('tiny'));
+    startupDebugger('Morgan enables...');
+}
+
+// Db work...
+dbDebugger('Connected to the database...');
+
+
+app.use(logger);
 
 const courses = [
    { id:1, name: 'course1' },
@@ -11,7 +39,7 @@ const courses = [
 ];
 
 app.get('/', function(req, res) {
-    res.send('Hello world!');
+    res.render('index', {title: 'My Express App', message: 'Hello'});
 });
 
 app.get('/api/courses', function(req, res) {
@@ -69,8 +97,6 @@ app.get('/api/courses/:id', (req, res) => {
     if(!course) return res.status(404).send('The course with given iD was not found'); //404
     res.send(course);
 });
- 
-
 
 const port = process.env.PORT || 3000;
 app.listen(port, function() {
